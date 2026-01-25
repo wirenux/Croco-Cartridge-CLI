@@ -229,6 +229,7 @@ int execute_command(CrocoDevice *device, uint8_t command, uint8_t *payload,
 
     if (bytes_read < 1) {
         fprintf(stderr, "No response from device\n");
+        printf("\x1b[1;33mTry (in the same order): disconnect / reconnect, close the WebApp, or use `sudo`.\x1b[0m\n");
         return -1;
     }
 
