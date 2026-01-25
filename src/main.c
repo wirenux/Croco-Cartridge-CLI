@@ -121,7 +121,8 @@ int configure_device(CrocoDevice *device) {
     if (ret == 1) {
         ret = libusb_detach_kernel_driver(device->dev, 0);
         if (ret != 0 && ret != LIBUSB_ERROR_NOT_SUPPORTED) {
-            fprintf(stderr, "Failed to detach kernel driver: %s\n", libusb_error_name(ret));
+            fprintf(stderr, "\x1b[1;31mCRITICAL: Access denied. \x1b[1;33mTry running with `sudo` or close the WebApp.\n");
+            fprintf(stderr, "\x1b[1;31mFailed to detach kernel driver: %s\n", libusb_error_name(ret));
             return -1;
         }
     }
@@ -280,7 +281,6 @@ int list_games(CrocoDevice *device) {
 
         if (info_bytes < 20) {
             fprintf(stderr, "Failed to get ROM %u info\n", i);
-            printf("Please disconnect your cartridge form the webapp (just reload the page)");
             continue;
         }
 
