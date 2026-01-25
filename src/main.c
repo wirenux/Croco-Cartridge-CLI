@@ -55,7 +55,7 @@ int find_croco_device(CrocoDevice *device) {
 
     if (libusb_open(found, &device->dev) != 0) {
         fprintf(stderr, "Failed to open device\n");
-        printf("\x1b[1;33mTry with `sudo`\n");
+        printf("\x1b[1;33mTry with `sudo`\x1b[0m\n");
         libusb_free_device_list(devs, 1);
         return -1;
     }
