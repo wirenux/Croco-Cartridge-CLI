@@ -10,4 +10,4 @@ all:
 	@echo "\n \x1b[1;32mBuild successful!\x1b[0m \n"
 
 run:
-	@./build/croco_cli -l
+	@./build/croco_cli
