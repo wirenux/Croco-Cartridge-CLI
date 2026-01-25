@@ -97,8 +97,8 @@ When selecting the upload option, you will be prompted for:
 Example:
 
 ```txt
-Enter path to ROM file: roms/pokemon-red.gb
-Enter display name (max 17 chars): Pokemon Red
+Enter path to ROM file: roms/snake.gb
+Enter display name (max 17 chars): Snake
 ```
 
 The cartridge will calculate the required number of banks (16KB banks) and transfer the ROM in 32-byte chunks. A progress indicator shows the current bank being written.
