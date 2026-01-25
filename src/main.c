@@ -425,6 +425,29 @@ int upload_rom(CrocoDevice *device, const char *file_path, const char *rom_name)
     return 0;
 }
 
+int delete_rom(CrocoDevice *device, uint8_t rom_id) {
+    printf("Attempting to delete ROM ID: %u...\n", rom_id);
+
+    uint8_t payload = rom_id;
+    uint8_t response[2];
+
+    // Command 0x05: deleteRom
+    int bytes = execute_command(device, 0x05, &payload, 1, response, sizeof(response));
+
+    if (bytes < 1) {
+        fprintf(stderr, "Error: No response from cartridge during delete.\n");
+        return -1;
+    }
+
+    if (response[0] != 0) {
+        fprintf(stderr, "\x1b[1;31mDelete failed! Cartridge rejected command with code: %d\x1b[0m\n", response[0]);
+        return -1;
+    }
+
+    printf("\x1b[1;32mSuccessfully deleted ROM %u and its save file.\x1b[0m\n", rom_id);
+    return 0;
+}
+
 void print_usage(const char *prog) {
     printf("Usage: %s [options]\n", prog);
     printf("Options:\n");
@@ -432,6 +455,7 @@ void print_usage(const char *prog) {
     printf("  -i, --info            Get device information\n");
     printf("  -w <file> <name>      Write/Upload a ROM to the cartridge\n");
     printf("  -h, --help            Show this help message\n");
+    printf("  -d <id>               Delete a ROM by its ID\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -483,6 +507,14 @@ int main(int argc, char *argv[]) {
             result = 1;
         } else {
             result = upload_rom(&device, argv[2], argv[3]);
+        }
+    } else if (strcmp(arg, "-d") == 0) {
+        if (argc < 3) {
+            fprintf(stderr, "Error: -d requires a <rom_id> (check -l for IDs)\n");
+            result = 1;
+        } else {
+            uint8_t id = (uint8_t)atoi(argv[2]);
+            result = delete_rom(&device, id);
         }
     } else {
         fprintf(stderr, "Unknown option: %s\n", arg);
