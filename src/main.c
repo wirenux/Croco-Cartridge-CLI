@@ -298,7 +298,7 @@ int list_games(CrocoDevice *device) {
         }
 
         printf("[%2u] %-22s | ROM: %5u x 32KB | RAM: %u x 8KB | MBC: 0x%02x\n",
-               i + 1, name, num_rom_banks, num_ram_banks, mbc);
+               i, name, num_rom_banks, num_ram_banks, mbc);
 
         usleep(10000); // safety delay
     }
