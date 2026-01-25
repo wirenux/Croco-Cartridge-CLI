@@ -73,6 +73,12 @@ Run the program without arguments to enter interactive menu mode:
 ./build/croco_cli
 ```
 
+or use :
+
+```bash
+make run
+```
+
 The menu provides the following options:
 
 - **`l`** - List all games on cartridge
