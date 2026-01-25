@@ -266,8 +266,7 @@ int list_games(CrocoDevice *device) {
     uint16_t used_banks = ((response[2] << 8) | response[1]) / 256;
     uint16_t max_banks = 888;
 
-    // TODO: change ./README.md:3
-    printf("Found %u game(s) using %u / %u banks (for more info: ./README.md:3)\n\n", num_roms, used_banks, max_banks);
+    printf("Found %u game(s) using %u / %u banks (for more info: ./README.md:156)\n\n", num_roms, used_banks, max_banks);
 
     if (num_roms == 0) {
         printf("No ROMs found on cartridge\n");

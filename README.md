@@ -155,9 +155,7 @@ The Croco cartridge communicates via USB using a custom command protocol. Comman
 
 ### Bank Calculation
 
-Banks are calculated as: **`file_size / 16384`** (16KB per bank)
-
-Example: A 48,640-byte ROM requires `48,640 / 16,384 = 3` banks
+Based on the real webapp [https://cartridge-web.croco-electronics.de/](https://cartridge-web.croco-electronics.de/) a bank is the `numbers of bytes / 256` ex: `48640 bytes / 256 = 190 banks`
 
 Note: The web interface displays banks differently due to a different bank size calculation. Refer to the [official Croco webapp](https://cartridge-web.croco-electronics.de/) for reference.
 
