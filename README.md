@@ -39,6 +39,12 @@ sudo apt-get install libusb-1.0-0-dev pkg-config
 sudo dnf install libusbx-devel pkg-config
 ```
 
+**Linux (Arch Linux):**
+
+```bash
+sudo dnf install libusb pkg-config
+```
+
 ## Building
 
 ```bash
