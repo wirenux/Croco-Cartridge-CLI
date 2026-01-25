@@ -11,6 +11,12 @@ A command-line interface for interacting with the Croco Game Boy cartridge reade
 - [ ] Save File Management - Download and upload Game Boy save files (SRAM)
 - [ ] RTC Support - Fetch and set Real Time Clock data for cartridges with RTC chips
 
+## Images
+
+<img src="assets/gif.gif" width=700>
+<img src="assets/main.png" width=500>
+<img src="assets/list.png" width=500>
+
 ## Requirements
 
 ### Dependencies
@@ -42,7 +48,7 @@ sudo dnf install libusbx-devel pkg-config
 **Linux (Arch Linux):**
 
 ```bash
-sudo dnf install libusb pkg-config
+sudo pacman -S libusb pkg-config
 ```
 
 ## Building
@@ -208,10 +214,18 @@ Note: The web interface displays banks differently due to a different bank size 
 - JavaScript Implementation: https://github.com/shilga/croco-cartridge-webapp
 - libusb Documentation: https://libusb.info/
 
-## License
+## 👀 🫵 ⏭️ ⏰ ヾ(＾ ∇ ＾).
 
-This project communicates with the Croco cartridge, which is a third-party device. Ensure you have legal rights to any ROMs you transfer.
+### Boring stuff
 
-## Support
+This project is released under the [Unlicense](./UNLICENSE).
 
-For issues specific to the Croco cartridge hardware or firmware, consult the official Croco Electronics documentation and support channels.
+Read more on [my blog](https://wirenux.github.io)
+
+Credit:
+
+- [Shilga](https://github.com/shilga)
+- [rp2040-gameboy-cartridge-firmware](https://github.com/shilga/rp2040-gameboy-cartridge-firmware/tree/master)
+- [croco-cartridge-webapp](https://github.com/shilga/croco-cartridge-webapp)
+
+**Developed with ❤️ & 💪 by [@wirenux](https://github.com/wirenux)**
