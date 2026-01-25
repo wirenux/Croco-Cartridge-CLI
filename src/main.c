@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <libusb.h>
+#include <arpa/inet.h>
 
 #define CROCO_VENDOR_ID  0x2e8a
 #define CROCO_PRODUCT_ID 0x107F
@@ -346,12 +347,90 @@ void cleanup(CrocoDevice *device) {
     }
 }
 
+int upload_rom(CrocoDevice *device, const char *file_path, const char *rom_name) {
+    FILE *f = fopen(file_path, "rb");
+    if (!f) {
+        perror("Failed to open ROM file");
+        return -1;
+    }
+
+    // Get file size
+    fseek(f, 0, SEEK_END);
+    long file_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    const int BANK_SIZE = 16384;
+    const int CHUNK_SIZE = 32;
+    const int CHUNKS_PER_BANK = 512;
+    uint16_t total_banks = (uint16_t)((file_size + BANK_SIZE - 1) / BANK_SIZE);
+
+    printf("Uploading: %s (%ld bytes, %u banks)\n", file_path, file_size, total_banks);
+
+    // Command 0x02: Request Upload
+    uint8_t req_payload[21] = {0};
+    uint16_t be_banks = htons(total_banks);
+    memcpy(req_payload, &be_banks, 2);
+
+    // Copy name (max 15-17 chars based on your JS logic)
+    strncpy((char*)(req_payload + 2), rom_name, 17);
+
+    // Speed switch bank (65535 / 0xFFFF)
+    uint16_t speed_switch = htons(0xFFFF);
+    memcpy(req_payload + 19, &speed_switch, 2);
+
+    uint8_t resp;
+    if (execute_command(device, 0x02, req_payload, 21, &resp, 1) < 0 || resp != 0) {
+        fprintf(stderr, "Upload request rejected by cartridge (Error: %d)\n", resp);
+        fclose(f);
+        return -1;
+    }
+    printf("\x1b[1;32mUpload request accepted.\x1b[0m\n");
+
+    // Command 0x03: Send Chunks
+    uint8_t *file_data = malloc(file_size);
+    fread(file_data, 1, file_size, f);
+    fclose(f);
+
+    for (uint16_t b = 0; b < total_banks; b++) {
+        printf("Writing Bank %u/%u...\r", b + 1, total_banks);
+        fflush(stdout);
+
+        for (uint16_t c = 0; c < CHUNKS_PER_BANK; c++) {
+            uint8_t chunk_payload[36] = {0};
+            uint32_t offset = (b * BANK_SIZE) + (c * CHUNK_SIZE);
+
+            // Prepare Header: Bank (2 bytes) + Chunk (2 bytes) in Big Endian
+            uint16_t be_b = htons(b);
+            uint16_t be_c = htons(c);
+            memcpy(chunk_payload, &be_b, 2);
+            memcpy(chunk_payload + 2, &be_c, 2);
+
+            // Copy Data (handle end of file padding)
+            if (offset < file_size) {
+                size_t to_copy = (file_size - offset < CHUNK_SIZE) ? (file_size - offset) : CHUNK_SIZE;
+                memcpy(chunk_payload + 4, file_data + offset, to_copy);
+            }
+
+            if (execute_command(device, 0x03, chunk_payload, 36, &resp, 1) < 0 || resp != 0) {
+                fprintf(stderr, "\nError at Bank %u, Chunk %u\n", b, c);
+                free(file_data);
+                return -1;
+            }
+        }
+    }
+
+    printf("\x1b[1;32m\n🏆 Upload Finished Successfully!\x1b[0m\n");
+    free(file_data);
+    return 0;
+}
+
 void print_usage(const char *prog) {
     printf("Usage: %s [options]\n", prog);
     printf("Options:\n");
-    printf("  -l, --list      List all games on cartridge\n");
-    printf("  -i, --info      Get device information\n");
-    printf("  -h, --help      Show this help message\n");
+    printf("  -l, --list            List all games on cartridge\n");
+    printf("  -i, --info            Get device information\n");
+    printf("  -w <file> <name>      Write/Upload a ROM to the cartridge\n");
+    printf("  -h, --help            Show this help message\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -373,7 +452,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("Croco Cartridge found!\n");
+    printf("\x1b[1;32mCroco Cartridge found!\x1b[0m\n");
+
     printf("Vendor ID: 0x%04x, Product ID: 0x%04x\n\n",
            device.vendor_id, device.product_id);
 
@@ -396,6 +476,13 @@ int main(int argc, char *argv[]) {
         result = get_device_info(&device);
     } else if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0) {
         print_usage(argv[0]);
+    } else if (strcmp(arg, "-w") == 0) {
+        if (argc < 4) {
+            fprintf(stderr, "Error: -w requires <file_path> and <rom_name>\n");
+            result = 1;
+        } else {
+            result = upload_rom(&device, argv[2], argv[3]);
+        }
     } else {
         fprintf(stderr, "Unknown option: %s\n", arg);
         print_usage(argv[0]);
