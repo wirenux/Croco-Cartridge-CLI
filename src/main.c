@@ -419,7 +419,7 @@ int upload_rom(CrocoDevice *device, const char *file_path, const char *rom_name)
         }
     }
 
-    printf("\x1b[1;32m\n🏆 Upload Finished Successfully!\x1b[0m\n");
+    printf("\x1b[1;32m\n == Upload Finished Successfully! ==\x1b[0m\n");
     free(file_data);
     return 0;
 }
