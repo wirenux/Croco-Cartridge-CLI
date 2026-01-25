@@ -1,1 +1,1 @@
-This Gameboy ROM (Snake-c) is from https://github.com/wirenux/snake-gb
+This Gameboy ROM (Snake) is from https://github.com/wirenux/snake-gb
