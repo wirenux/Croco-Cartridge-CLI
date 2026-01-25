@@ -29,7 +29,7 @@ int find_croco_device(CrocoDevice *device) {
     libusb_device **devs;
     libusb_device *found = NULL;
     ssize_t cnt = libusb_get_device_list(NULL, &devs);
-    
+
     if (cnt < 0) {
         fprintf(stderr, "Error getting device list\n");
         return -1;
@@ -84,13 +84,13 @@ int get_endpoints(CrocoDevice *device) {
         iface = &config->interface[i];
         if (iface->num_altsetting > 0) {
             iface_desc = &iface->altsetting[0];
-            
+
             if (iface_desc->bInterfaceClass == 0xFF) {
                 device->if_num = iface_desc->bInterfaceNumber;
-                
+
                 for (int j = 0; j < iface_desc->bNumEndpoints; j++) {
                     const struct libusb_endpoint_descriptor *ep = &iface_desc->endpoint[j];
-                    
+
                     if ((ep->bmAttributes & LIBUSB_TRANSFER_TYPE_MASK) == LIBUSB_TRANSFER_TYPE_BULK) {
                         if (ep->bEndpointAddress & LIBUSB_ENDPOINT_IN) {
                             device->in_ep = ep->bEndpointAddress;
@@ -105,7 +105,7 @@ int get_endpoints(CrocoDevice *device) {
     }
 
     libusb_free_config_descriptor(config);
-    
+
     if (device->out_ep == 0 || device->in_ep == 0) {
         fprintf(stderr, "Could not find bulk endpoints\n");
         return -1;
@@ -198,7 +198,7 @@ int read_response(CrocoDevice *device, uint8_t *buffer, int max_len) {
     return transferred;
 }
 
-int execute_command(CrocoDevice *device, uint8_t command, uint8_t *payload, 
+int execute_command(CrocoDevice *device, uint8_t command, uint8_t *payload,
                     int payload_len, uint8_t *response, int response_len) {
     uint8_t cmd_buffer[65];
     int cmd_len = 1 + payload_len;
@@ -232,7 +232,7 @@ int execute_command(CrocoDevice *device, uint8_t command, uint8_t *payload,
 
     // First byte should echo the command
     if (buffer[0] != command) {
-        fprintf(stderr, "Command echo mismatch: expected 0x%02x, got 0x%02x\n", 
+        fprintf(stderr, "Command echo mismatch: expected 0x%02x, got 0x%02x\n",
                 command, buffer[0]);
         return -1;
     }
@@ -252,17 +252,18 @@ int list_games(CrocoDevice *device) {
 
     uint8_t response[10];
     int bytes = execute_command(device, 0x01, NULL, 0, response, sizeof(response));
-    
+
     if (bytes < 5) {
         fprintf(stderr, "Failed to get ROM utilization\n");
         return -1;
     }
 
     uint8_t num_roms = response[0];
-    uint16_t used_banks = (response[2] << 8) | response[1];
-    uint16_t max_banks = (response[4] << 8) | response[3];
+    uint16_t used_banks = ((response[2] << 8) | response[1]) / 256;
+    uint16_t max_banks = 888;
 
-    printf("Found %u game(s) using %u / %u banks\n\n", num_roms, used_banks, max_banks);
+    // TODO: change ./README.md:3
+    printf("Found %u game(s) using %u / %u banks (for more info: ./README.md:3)\n\n", num_roms, used_banks, max_banks);
 
     if (num_roms == 0) {
         printf("No ROMs found on cartridge\n");
@@ -273,10 +274,10 @@ int list_games(CrocoDevice *device) {
     for (int i = 0; i < num_roms; i++) {
         uint8_t rom_id = i;
         uint8_t info_response[25];
-        
-        int info_bytes = execute_command(device, 0x04, &rom_id, 1, 
+
+        int info_bytes = execute_command(device, 0x04, &rom_id, 1,
                                          info_response, sizeof(info_response));
-        
+
         if (info_bytes < 20) {
             fprintf(stderr, "Failed to get ROM %u info\n", i);
             continue;
@@ -285,7 +286,7 @@ int list_games(CrocoDevice *device) {
         char name[18];
         memcpy(name, info_response, 17);
         name[17] = '\0';
-        
+
         uint8_t num_ram_banks = info_response[17];
         uint8_t mbc = (info_bytes > 18) ? info_response[18] : 0xFF;
         uint16_t num_rom_banks = 0;
@@ -296,7 +297,7 @@ int list_games(CrocoDevice *device) {
         printf("[%2u] %-22s | ROM: %5u x 32KB | RAM: %u x 8KB | MBC: 0x%02x\n",
                i + 1, name, num_rom_banks, num_ram_banks, mbc);
 
-        usleep(50000);
+        usleep(10000); // safety delay
     }
 
     return 0;
@@ -307,7 +308,7 @@ int get_device_info(CrocoDevice *device) {
 
     uint8_t response[15];
     int bytes = execute_command(device, 0xFE, NULL, 0, response, sizeof(response));
-    
+
     if (bytes < 11) {
         fprintf(stderr, "Failed to get device info\n");
         return -1;
@@ -317,7 +318,7 @@ int get_device_info(CrocoDevice *device) {
     printf("  Feature Step: %u\n", response[0]);
     printf("  HW Version: %u\n", response[1]);
     printf("  SW Version: %u.%u.%u%c\n", response[2], response[3], response[4], response[5]);
-    printf("  Git Short: 0x%08x\n", 
+    printf("  Git Short: 0x%08x\n",
            (response[6] << 24) | (response[7] << 16) | (response[8] << 8) | response[9]);
     printf("  Git Dirty: %s\n", response[10] ? "yes" : "no");
 
@@ -325,7 +326,7 @@ int get_device_info(CrocoDevice *device) {
     usleep(50000);
     uint8_t serial_response[10];
     int serial_bytes = execute_command(device, 0xFD, NULL, 0, serial_response, sizeof(serial_response));
-    
+
     if (serial_bytes >= 8) {
         printf("  Serial ID: ");
         for (int i = 0; i < 8; i++) {
@@ -372,7 +373,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Croco Cartridge found!\n");
-    printf("Vendor ID: 0x%04x, Product ID: 0x%04x\n\n", 
+    printf("Vendor ID: 0x%04x, Product ID: 0x%04x\n\n",
            device.vendor_id, device.product_id);
 
     if (get_endpoints(&device) != 0) {
