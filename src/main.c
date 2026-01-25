@@ -462,11 +462,6 @@ int main(int argc, char *argv[]) {
     CrocoDevice device = {0};
     int result = 0;
 
-    if (argc < 2) {
-        print_usage(argv[0]);
-        return 1;
-    }
-
     if (libusb_init(NULL) != 0) {
         fprintf(stderr, "Failed to initialize libusb\n");
         return 1;
@@ -477,52 +472,59 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("\x1b[1;32mCroco Cartridge found!\x1b[0m\n");
+    printf("\x1b[1;32mCroco Cartridge found and connected!\x1b[0m\n");
 
-    printf("Vendor ID: 0x%04x, Product ID: 0x%04x\n\n",
-           device.vendor_id, device.product_id);
-
-    if (get_endpoints(&device) != 0) {
+    if (get_endpoints(&device) != 0 || configure_device(&device) != 0) {
         cleanup(&device);
         libusb_exit(NULL);
         return 1;
     }
 
-    if (configure_device(&device) != 0) {
-        cleanup(&device);
-        libusb_exit(NULL);
-        return 1;
-    }
+    char choice;
+    char path[256];
+    char name[20];
+    int rom_id;
 
-    const char *arg = argv[1];
-    if (strcmp(arg, "-l") == 0 || strcmp(arg, "--list") == 0) {
-        result = list_games(&device);
-    } else if (strcmp(arg, "-i") == 0 || strcmp(arg, "--info") == 0) {
-        result = get_device_info(&device);
-    } else if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0) {
-        print_usage(argv[0]);
-    } else if (strcmp(arg, "-w") == 0) {
-        if (argc < 4) {
-            fprintf(stderr, "Error: -w requires <file_path> and <rom_name>\n");
-            result = 1;
-        } else {
-            result = upload_rom(&device, argv[2], argv[3]);
+    // loop to keep the cartridge alive
+    while (1) {
+        printf("\n--- Croco Menu ---\n");
+        printf("l) List Games\n");
+        printf("a) Add Game (Upload ROM)\n");
+        printf("d) Delete a Game\n");
+        printf("i) Device Info\n");
+        printf("q) Quit\n");
+        printf("Choice: ");
+
+        if (scanf(" %c", &choice) != 1) break;
+
+        if (choice == 'q') break;
+
+        switch (choice) {
+            case 'l':
+                list_games(&device);
+                break;
+            case 'a':
+                printf("Enter path to ROM file: ");
+                scanf("%s", path);
+                printf("Enter display name (max 17 chars): ");
+                scanf("%s", name);
+                upload_rom(&device, path, name);
+                break;
+            case 'd':
+                printf("Enter ROM ID to delete: ");
+                if (scanf("%d", &rom_id) == 1) {
+                    delete_rom(&device, (uint8_t)rom_id);
+                }
+                break;
+            case 'i':
+                get_device_info(&device);
+                break;
+            default:
+                printf("Unknown option.\n");
         }
-    } else if (strcmp(arg, "-d") == 0) {
-        if (argc < 3) {
-            fprintf(stderr, "Error: -d requires a <rom_id> (check -l for IDs)\n");
-            result = 1;
-        } else {
-            uint8_t id = (uint8_t)atoi(argv[2]);
-            result = delete_rom(&device, id);
-        }
-    } else {
-        fprintf(stderr, "Unknown option: %s\n", arg);
-        print_usage(argv[0]);
-        result = 1;
     }
 
     cleanup(&device);
     libusb_exit(NULL);
-    return result;
+    return 0;
 }
