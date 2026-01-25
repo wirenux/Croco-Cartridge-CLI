@@ -126,9 +126,9 @@ Displays all games currently on the cartridge with the following information:
 Example output:
 
 ```txt
-[ 0] Pokemon Red      | ROM:   256 x 32KB | RAM: 1 x 8KB | MBC: 0x03
-[ 1] Pokemon Blue     | ROM:   256 x 32KB | RAM: 1 x 8KB | MBC: 0x03
-[ 2] Tetris           | ROM:     2 x 32KB | RAM: 0 x 8KB | MBC: 0x00
+[ 0] Hello-ASM        | ROM:   512 x 32KB | RAM: 0 x 8KB | MBC: 0x00
+[ 1] FydosMagicTiles  | ROM:   512 x 32KB | RAM: 0 x 8KB | MBC: 0x00
+[ 2] Input AS         | ROM:   512 x 32KB | RAM: 0 x 8KB | MBC: 0x00
 ```
 
 ## Protocol Reference
