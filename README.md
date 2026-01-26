@@ -33,23 +33,31 @@ A command-line interface for interacting with the Croco Game Boy cartridge reade
 brew install libusb pkg-config
 ```
 
-**Linux (Debian/Ubuntu):**
+**Debian/Ubuntu**
 
 ```bash
 sudo apt-get install libusb-1.0-0-dev pkg-config
 ```
 
-**Linux (Fedora):**
+**Fedora**
 
 ```bash
 sudo dnf install libusbx-devel pkg-config
 ```
 
-**Linux (Arch Linux):**
+**Arch Linux**
 
 ```bash
 sudo pacman -S libusb pkg-config
 ```
+
+**Alpine Linux**
+
+```bash
+sudo apk add libusb libusb-dev pkg-config
+```
+
+
 
 ## Building
 
@@ -126,9 +134,11 @@ Displays all games currently on the cartridge with the following information:
 Example output:
 
 ```txt
-[ 0] Hello-ASM        | ROM:   512 x 32KB | RAM: 0 x 8KB | MBC: 0x00
-[ 1] FydosMagicTiles  | ROM:   512 x 32KB | RAM: 0 x 8KB | MBC: 0x00
-[ 2] Input AS         | ROM:   512 x 32KB | RAM: 0 x 8KB | MBC: 0x00
+  ID   NAME                     | ROM SIZE   | RAM     | MBC
+  ---- ------------------------ | ---------- | ------- | ----
+  [ 0]  FydosMagicTiles         |   2 Banks  | RAM:  0 | MBC: 0x00
+  [ 1]  Hello-ASM               |   2 Banks  | RAM:  0 | MBC: 0x00
+  [ 2]  Input ASM               |   2 Banks  | RAM:  0 | MBC: 0x00
 ```
 
 ## Protocol Reference
