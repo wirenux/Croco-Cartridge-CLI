@@ -7,7 +7,7 @@ INCLUDES = -I$(HOMEBREW_PREFIX)/include/libusb-1.0
 all:
 	@mkdir -p build
 	gcc $(CFLAGS) $(INCLUDES) src/main.c -o build/croco_cli $(LIBS)
-	@echo \n \x1b[1;32mBuild successful!\x1b[0m \n
+	@printf "\n \033[1;32mBuild successful!\033[0m \n\n"
 
 run:
 	@./build/croco_cli
