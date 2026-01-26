@@ -530,7 +530,7 @@ int main(int argc, char *argv[]) {
         printf("  \x1b[34m[i]\x1b[0m Hardware Info\n");
         printf("  \x1b[90m[q]\x1b[0m Disconnect\n");
         printf("\n  \x1b[1;34m[>] \x1b[0m");
-
+        fflush(stdout);
         if (scanf(" %c", &choice) != 1) break;
 
         if (choice == 'q') {
