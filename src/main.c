@@ -252,37 +252,42 @@ int execute_command(CrocoDevice *device, uint8_t command, uint8_t *payload,
 }
 
 int list_games(CrocoDevice *device) {
-    printf("\nFetching ROM information...\n");
+    printf("\n\x1b[1;34m[>] Fetching Cartridge Memory...\x1b[0m\n");
 
     uint8_t response[10];
     int bytes = execute_command(device, 0x01, NULL, 0, response, sizeof(response));
 
     if (bytes < 5) {
-        fprintf(stderr, "Failed to get ROM utilization\n");
+        fprintf(stderr, "\x1b[1;31m[!] Error: Failed to retrieve ROM utilization\x1b[0m\n");
         return -1;
     }
 
     uint8_t num_roms = response[0];
     uint16_t used_banks = ((response[2] << 8) | response[1]) / 256;
     uint16_t max_banks = 888;
+    float percent = ((float)used_banks / max_banks) * 100;
 
-    printf("Found %u game(s) using %u / %u banks (for more info: ./README.md:156)\n\n", num_roms, used_banks, max_banks);
+    printf("\x1b[1;33m+-------------------------------------------------------------+\x1b[0m\n");
+    printf("  Storage: [\x1b[1;32m%u/%u Banks\x1b[0m] used (%.1f%% full)\n", used_banks, max_banks, percent);
+    printf("  Capacity: %u Games Registered\n", num_roms);
+    printf("\x1b[1;33m+-------------------------------------------------------------+\x1b[0m\n\n");
 
     if (num_roms == 0) {
-        printf("No ROMs found on cartridge\n");
+        printf("  \x1b[90m(No ROMs found on cartridge memory)\x1b[0m\n");
         return 0;
     }
 
-    // Fetch info for each ROM
+    printf("\x1b[1;37m  ID   NAME                     | ROM SIZE   | RAM     | MBC \x1b[0m\n");
+    printf("\x1b[90m  ---- ------------------------ | ---------- | ------- | ----\x1b[0m\n");
+
     for (int i = 0; i < num_roms; i++) {
         uint8_t rom_id = i;
         uint8_t info_response[25];
 
-        int info_bytes = execute_command(device, 0x04, &rom_id, 1,
-                                         info_response, sizeof(info_response));
+        int info_bytes = execute_command(device, 0x04, &rom_id, 1, info_response, sizeof(info_response));
 
         if (info_bytes < 20) {
-            fprintf(stderr, "Failed to get ROM %u info\n", i);
+            fprintf(stderr, "  \x1b[31m[!] Error reading slot %u\x1b[0m\n", i);
             continue;
         }
 
@@ -297,46 +302,67 @@ int list_games(CrocoDevice *device) {
             num_rom_banks = (info_response[20] << 8) | info_response[19];
         }
 
-        printf("[%2u] %-22s | ROM: %5u x 32KB | RAM: %u x 8KB | MBC: 0x%02x\n",
-               i, name, num_rom_banks, num_ram_banks, mbc);
+        // Inside your loop, replace your existing printf with this:
 
-        usleep(10000); // safety delay
+        printf("  [\x1b[32m%2u\x1b[0m]  \x1b[1;36m%-23s\x1b[0m | \x1b[33m%3u Banks \x1b[0m | RAM: %2u | MBC: 0x%02X\n",
+            i, 
+            name, 
+            num_rom_banks / 256,  // This replaces the size in KB
+            num_ram_banks, 
+            mbc);
+
+        usleep(10000); 
     }
+    printf("\x1b[90m  -------------------------------------------------------------\x1b[0m\n");
 
     return 0;
 }
 
 int get_device_info(CrocoDevice *device) {
-    printf("\nFetching device information...\n\n");
+    printf("\n\x1b[1;34m[>] Accessing Hardware Registers...\x1b[0m\n\n");
 
     uint8_t response[15];
     int bytes = execute_command(device, 0xFE, NULL, 0, response, sizeof(response));
 
     if (bytes < 11) {
-        fprintf(stderr, "Failed to get device info\n");
+        printf("\x1b[1;31m[!] CRITICAL ERROR: Hardware communication timeout.\x1b[0m\n");
         return -1;
     }
 
-    printf("Device Information:\n");
-    printf("  Feature Step: %u\n", response[0]);
-    printf("  HW Version: %u\n", response[1]);
-    printf("  SW Version: %u.%u.%u%c\n", response[2], response[3], response[4], response[5]);
-    printf("  Git Short: 0x%08x\n",
-           (response[6] << 24) | (response[7] << 16) | (response[8] << 8) | response[9]);
-    printf("  Git Dirty: %s\n", response[10] ? "yes" : "no");
+    // Header for the Hardware Card
+    printf("\x1b[1;37mCROCO HARDWARE MANIFEST\x1b[0m\n");
+    printf("\x1b[90m=============================================================\x1b[0m\n");
+
+    // Feature and Hardware version
+    printf(" \x1b[1m%-15s\x1b[0m %u\n", "Feature Step:", response[0]);
+    printf(" \x1b[1m%-15s\x1b[0m v%u\n", "HW Revision:", response[1]);
+
+    // Software version with a nice color highlight
+    printf(" \x1b[1m%-15s\x1b[0m \x1b[32m%u.%u.%u%c\x1b[0m\n", 
+           "Firmware:", response[2], response[3], response[4], response[5]);
+
+    // Git Hash
+    uint32_t git_hash = (response[6] << 24) | (response[7] << 16) | (response[8] << 8) | response[9];
+    printf(" \x1b[1m%-15s\x1b[0m \x1b[36m#%08x\x1b[0m\n", "Build Hash:", git_hash);
+
+    // Git Dirty (Red if dirty, Green if clean)
+    const char* dirty_label = response[10] ? "\x1b[31mYES (Modified)\x1b[0m" : "\x1b[32mNO (Clean)\x1b[0m";
+    printf(" \x1b[1m%-15s\x1b[0m %s\n", "Git Dirty:", dirty_label);
 
     // Get serial ID (command 0xFD)
-    usleep(50000);
+    usleep(50000); 
     uint8_t serial_response[10];
     int serial_bytes = execute_command(device, 0xFD, NULL, 0, serial_response, sizeof(serial_response));
 
     if (serial_bytes >= 8) {
-        printf("  Serial ID: ");
+        printf(" \x1b[1m%-15s\x1b[0m \x1b[1;33m", "Serial ID:");
         for (int i = 0; i < 8; i++) {
             printf("%02X", serial_response[i]);
         }
-        printf("\n");
+        printf("\x1b[0m\n");
     }
+
+    printf("\x1b[90m=============================================================\x1b[0m\n");
 
     return 0;
 }
@@ -472,6 +498,17 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    printf("\033[H\033[J"); // clear
+    printf(
+        "    █████████                                           █████████  █████       █████\n"
+        "  ███░░░░░███                                         ███░░░░░███░░███        ░░███ \n"
+        " ███     ░░░  ████████   ██████   ██████   ██████     ███     ░░░  ░███         ░███ \n"
+        "░███          ░░███░░███ ███░░███ ███░░███ ███░░███   ░███          ░███         ░███ \n"
+        "░███           ░███ ░░░ ░███ ░███░███ ░░░ ░███ ░███   ░███          ░███         ░███ \n"
+        "░░███     ███  ░███     ░███ ░███░███  ███░███ ░███   ░░███     ███ ░███      █  ░███ \n"
+        " ░░█████████   █████    ░░██████ ░░██████ ░░██████     ░░█████████  ███████████ █████\n"
+        "  ░░░░░░░░░   ░░░░░      ░░░░░░   ░░░░░░   ░░░░░░       ░░░░░░░░░  ░░░░░░░░░░░ ░░░░░ \n"
+    );
     printf("\x1b[1;32mCroco Cartridge found and connected!\x1b[0m\n");
 
     if (get_endpoints(&device) != 0 || configure_device(&device) != 0) {
@@ -484,20 +521,22 @@ int main(int argc, char *argv[]) {
     char path[256];
     char name[20];
     int rom_id;
-
     // loop to keep the cartridge alive
     while (1) {
-        printf("\n--- Croco Menu ---\n");
-        printf("l) List Games\n");
-        printf("a) Add Game (Upload ROM)\n");
-        printf("d) Delete a Game\n");
-        printf("i) Device Info\n");
-        printf("q) Quit\n");
-        printf("Choice: ");
+        printf("\n  \x1b[1mMAIN INTERFACE\x1b[0m\n");
+        printf("  \x1b[32m[l]\x1b[0m List Library\n");
+        printf("  \x1b[32m[a]\x1b[0m Flash New ROM\n");
+        printf("  \x1b[31m[d]\x1b[0m Wipe ROM\n");
+        printf("  \x1b[34m[i]\x1b[0m Hardware Info\n");
+        printf("  \x1b[90m[q]\x1b[0m Disconnect\n");
+        printf("\n  \x1b[1;34m[>] \x1b[0m");
 
         if (scanf(" %c", &choice) != 1) break;
 
-        if (choice == 'q') break;
+        if (choice == 'q') {
+            printf("\x1b[34mDisconnecting safely...\x1b[0m\n");
+            break;
+        }
 
         switch (choice) {
             case 'l':
