@@ -118,7 +118,7 @@ Example:
 
 =================================================
     SUCCESS: ROM flashed to cartridge memory!
-=============================================================
+=================================================
 ```
 
 The cartridge will calculate the required number of banks (16KB banks) and transfer the ROM in 32-byte chunks. A progress indicator shows the current bank being written.
