@@ -557,6 +557,7 @@ int main(int argc, char *argv[]) {
                 upload_rom(&device, path, name);
                 break;
             case 'd':
+                list_games(&device);
                 printf("\n");
                 printf("   \x1b[1;31m[!] DANGER ZONE\x1b[0m\n");
                 printf("    \x1b[1;31m[-] \x1b[0m\x1b[1mEnter ROM ID to wipe: \x1b[0m");
