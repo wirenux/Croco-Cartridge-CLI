@@ -547,19 +547,29 @@ int main(int argc, char *argv[]) {
             case 'l':
                 list_games(&device, 0);
                 break;
-            case 'a':
-                printf("\n\x1b[1;34m   [?]\x1b[0m \x1b[1mEnter path to ROM file: \x1b[0m");
-                fflush(stdout); 
-                scanf("%s", path);
+            case 'a': {
+                    printf("\n\x1b[1;34m   [?]\x1b[0m \x1b[1mEnter path to ROM file (or 'EXIT'): \x1b[0m");
+                    fflush(stdout); 
+                    if (scanf("%s", path) != 1) break;
 
-                printf("\x1b[1;34m   [?]\x1b[0m \x1b[1mEnter display name (max 17 chars): \x1b[0m");
-                fflush(stdout);
-                scanf("%s", name);
+                    if (strcasecmp(path, "EXIT") == 0) {
+                        printf("    \x1b[1;34mUpload cancelled.\x1b[0m\n");
+                        break;
+                    }
 
-                upload_rom(&device, path, name);
+                    printf("\x1b[1;34m   [?]\x1b[0m \x1b[1mEnter display name (max 17 chars): \x1b[0m");
+                    fflush(stdout);
+                    if (scanf("%s", name) != 1) break;
+
+                    if (strcasecmp(name, "EXIT") == 0) { // case sensitive
+                        printf("    \x1b[1;34mUpload cancelled.\x1b[0m\n");
+                        break;
+                    }
+
+                    upload_rom(&device, path, name);
+                }
                 break;
-            case 'd':
-                {
+            case 'd': {
                     char input[16];
                     list_games(&device, 1); // mode 1 = no header
                     printf("\n");
@@ -568,7 +578,7 @@ int main(int argc, char *argv[]) {
                     fflush(stdout);
                     
                     if (scanf("%s", input) == 1) {
-                        if (strcasecmp(input, "EXIT") == 0) {
+                        if (strcasecmp(input, "EXIT") == 0) { // case sensitive
                             printf("    \x1b[1;34mReturning to main menu...\x1b[0m\n");
                             break; 
                         }
