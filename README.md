@@ -129,7 +129,7 @@ Select the delete option and enter the ROM ID (shown in the game list):
 
 ```txt
 [!] DANGER ZONE
-    [-] Enter ROM ID to wipe: 9
+    [-] Enter ROM ID to wipe (or type 'EXIT'):
 ```
 
 This will remove both the ROM and its associated save file.
