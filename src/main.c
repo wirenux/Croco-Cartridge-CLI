@@ -319,35 +319,35 @@ int list_games(CrocoDevice *device) {
 }
 
 int get_device_info(CrocoDevice *device) {
-    printf("\n\x1b[1;34m[>] Accessing Hardware Registers...\x1b[0m\n\n");
+    printf("\n   \x1b[1;34m[>] Accessing Hardware Registers...\x1b[0m\n\n");
 
     uint8_t response[15];
     int bytes = execute_command(device, 0xFE, NULL, 0, response, sizeof(response));
 
     if (bytes < 11) {
-        printf("\x1b[1;31m[!] CRITICAL ERROR: Hardware communication timeout.\x1b[0m\n");
+        printf("   \x1b[1;31m[!] CRITICAL ERROR: Hardware communication timeout.\x1b[0m\n");
         return -1;
     }
 
     // Header for the Hardware Card
-    printf("\x1b[1;37mCROCO HARDWARE MANIFEST\x1b[0m\n");
-    printf("\x1b[90m=============================================================\x1b[0m\n");
+    printf("   \x1b[1;37mCROCO HARDWARE MANIFEST\x1b[0m\n");
+    printf("   \x1b[90m=============================================================\x1b[0m\n");
 
     // Feature and Hardware version
-    printf(" \x1b[1m%-15s\x1b[0m %u\n", "Feature Step:", response[0]);
-    printf(" \x1b[1m%-15s\x1b[0m v%u\n", "HW Revision:", response[1]);
+    printf("    \x1b[1m%-15s\x1b[0m %u\n", "Feature Step:", response[0]);
+    printf("    \x1b[1m%-15s\x1b[0m v%u\n", "HW Revision:", response[1]);
 
     // Software version with a nice color highlight
-    printf(" \x1b[1m%-15s\x1b[0m \x1b[32m%u.%u.%u%c\x1b[0m\n", 
+    printf("    \x1b[1m%-15s\x1b[0m \x1b[32m%u.%u.%u%c\x1b[0m\n", 
            "Firmware:", response[2], response[3], response[4], response[5]);
 
     // Git Hash
     uint32_t git_hash = (response[6] << 24) | (response[7] << 16) | (response[8] << 8) | response[9];
-    printf(" \x1b[1m%-15s\x1b[0m \x1b[36m#%08x\x1b[0m\n", "Build Hash:", git_hash);
+    printf("    \x1b[1m%-15s\x1b[0m \x1b[36m#%08x\x1b[0m\n", "Git Commit:", git_hash);
 
     // Git Dirty (Red if dirty, Green if clean)
     const char* dirty_label = response[10] ? "\x1b[31mYES (Modified)\x1b[0m" : "\x1b[32mNO (Clean)\x1b[0m";
-    printf(" \x1b[1m%-15s\x1b[0m %s\n", "Git Dirty:", dirty_label);
+    printf("    \x1b[1m%-15s\x1b[0m %s\n", "Git Dirty:", dirty_label);
 
     // Get serial ID (command 0xFD)
     usleep(50000); 
@@ -355,14 +355,14 @@ int get_device_info(CrocoDevice *device) {
     int serial_bytes = execute_command(device, 0xFD, NULL, 0, serial_response, sizeof(serial_response));
 
     if (serial_bytes >= 8) {
-        printf(" \x1b[1m%-15s\x1b[0m \x1b[1;33m", "Serial ID:");
+        printf("    \x1b[1m%-15s\x1b[0m \x1b[1;33m", "Serial ID:");
         for (int i = 0; i < 8; i++) {
             printf("%02X", serial_response[i]);
         }
         printf("\x1b[0m\n");
     }
 
-    printf("\x1b[90m=============================================================\x1b[0m\n");
+    printf("   \x1b[90m=============================================================\x1b[0m\n");
 
     return 0;
 }
