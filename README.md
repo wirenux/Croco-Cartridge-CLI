@@ -105,7 +105,7 @@ When selecting the upload option, you will be prompted for:
 Example:
 
 ```txt
-[?] Enter path to ROM file: roms/Snake.gb
+[?] Enter path to ROM file (or 'EXIT'): roms/Snake.gb
 [?] Enter display name (max 17 chars): Snake
 
 [>] Initializing Data Stream...
