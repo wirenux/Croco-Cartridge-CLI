@@ -252,7 +252,7 @@ int execute_command(CrocoDevice *device, uint8_t command, uint8_t *payload,
 }
 
 int list_games(CrocoDevice *device) {
-    printf("\n\x1b[1;34m[>] Fetching Cartridge Memory...\x1b[0m\n");
+    printf("\n   \x1b[1;34m[>] Fetching Cartridge Memory...\x1b[0m\n");
 
     uint8_t response[10];
     int bytes = execute_command(device, 0x01, NULL, 0, response, sizeof(response));
@@ -267,18 +267,18 @@ int list_games(CrocoDevice *device) {
     uint16_t max_banks = 888;
     float percent = ((float)used_banks / max_banks) * 100;
 
-    printf("\x1b[1;33m+-------------------------------------------------------------+\x1b[0m\n");
-    printf("  Storage: [\x1b[1;32m%u/%u Banks\x1b[0m] used (%.1f%% full)\n", used_banks, max_banks, percent);
-    printf("  Capacity: %u Games Registered\n", num_roms);
-    printf("\x1b[1;33m+-------------------------------------------------------------+\x1b[0m\n\n");
+    printf("   \x1b[1;33m+-------------------------------------------------------------+\x1b[0m\n");
+    printf("     Storage: [\x1b[1;32m%u/%u Banks\x1b[0m] used (%.1f%% full)\n", used_banks, max_banks, percent);
+    printf("     Capacity: %u Games Registered\n", num_roms);
+    printf("   \x1b[1;33m+-------------------------------------------------------------+\x1b[0m\n\n");
 
     if (num_roms == 0) {
-        printf("  \x1b[90m(No ROMs found on cartridge memory)\x1b[0m\n");
+        printf("     \x1b[90m(No ROMs found on cartridge memory)\x1b[0m\n");
         return 0;
     }
 
-    printf("\x1b[1;37m  ID   NAME                     | ROM SIZE   | RAM     | MBC \x1b[0m\n");
-    printf("\x1b[90m  ---- ------------------------ | ---------- | ------- | ----\x1b[0m\n");
+    printf(" \x1b[1;37m  ID   NAME                     | ROM SIZE   | RAM     | MBC \x1b[0m\n");
+    printf(" \x1b[90m  ---- ------------------------ | ---------- | ------- | ----\x1b[0m\n");
 
     for (int i = 0; i < num_roms; i++) {
         uint8_t rom_id = i;
@@ -304,7 +304,7 @@ int list_games(CrocoDevice *device) {
 
         // Inside your loop, replace your existing printf with this:
 
-        printf("  [\x1b[32m%2u\x1b[0m]  \x1b[1;36m%-23s\x1b[0m | \x1b[33m%3u Banks \x1b[0m | RAM: %2u | MBC: 0x%02X\n",
+        printf("   [\x1b[32m%2u\x1b[0m]  \x1b[1;36m%-23s\x1b[0m | \x1b[33m%3u Banks \x1b[0m | RAM: %2u | MBC: 0x%02X\n",
             i, 
             name, 
             num_rom_banks / 256,  // This replaces the size in KB
@@ -313,7 +313,7 @@ int list_games(CrocoDevice *device) {
 
         usleep(10000); 
     }
-    printf("\x1b[90m  -------------------------------------------------------------\x1b[0m\n");
+    printf(" \x1b[90m  -------------------------------------------------------------\x1b[0m\n");
 
     return 0;
 }
@@ -377,7 +377,7 @@ void cleanup(CrocoDevice *device) {
 int upload_rom(CrocoDevice *device, const char *file_path, const char *rom_name) {
     FILE *f = fopen(file_path, "rb");
     if (!f) {
-        perror("Failed to open ROM file");
+        printf("\x1b[1;31m[!] CRITICAL ERROR: Could not open ROM file: %s\x1b[0m\n", file_path);
         return -1;
     }
 
@@ -391,68 +391,71 @@ int upload_rom(CrocoDevice *device, const char *file_path, const char *rom_name)
     const int CHUNKS_PER_BANK = 512;
     uint16_t total_banks = (uint16_t)((file_size + BANK_SIZE - 1) / BANK_SIZE);
 
-    printf("Uploading: %s (%ld bytes, %u banks)\n", file_path, file_size, total_banks);
+    printf("\n\x1b[1;34m   [>] Initializing Data Stream...\x1b[0m\n");
+    printf("       Target:  \x1b[1;36m%s\x1b[0m\n", rom_name);
+    printf("       Size:    \x1b[1;33m%ld bytes\x1b[0m (%u banks)\n", file_size, total_banks);
 
     // Command 0x02: Request Upload
     uint8_t req_payload[21] = {0};
     uint16_t be_banks = htons(total_banks);
     memcpy(req_payload, &be_banks, 2);
-
-    // Copy name (max 15-17 chars based on your JS logic)
     strncpy((char*)(req_payload + 2), rom_name, 17);
-
-    // Speed switch bank (65535 / 0xFFFF)
     uint16_t speed_switch = htons(0xFFFF);
     memcpy(req_payload + 19, &speed_switch, 2);
 
     uint8_t resp;
     if (execute_command(device, 0x02, req_payload, 21, &resp, 1) < 0 || resp != 0) {
-        fprintf(stderr, "Upload request rejected by cartridge (Error: %d)\n", resp);
+        fprintf(stderr, "\x1b[1;31m[!] Upload request rejected by cartridge (Error: %d)\x1b[0m\n", resp);
         fclose(f);
         return -1;
     }
-    printf("\x1b[1;32mUpload request accepted.\x1b[0m\n");
+    printf("\n\x1b[1;32m   [+] Handshake successful. Uploading data...\x1b[0m\n\n");
 
     // Command 0x03: Send Chunks
     uint8_t *file_data = malloc(file_size);
+    if (!file_data) {
+        fclose(f);
+        return -1;
+    }
     fread(file_data, 1, file_size, f);
     fclose(f);
 
     for (uint16_t b = 0; b < total_banks; b++) {
-        printf("Writing Bank %u/%u...\r", b + 1, total_banks);
+        printf("\r       \x1b[1;33mWriting Bank:\x1b[0m [\x1b[1;32m%u\x1b[0m/\x1b[1;32m%u\x1b[0m] ... ", b + 1, total_banks);
         fflush(stdout);
 
         for (uint16_t c = 0; c < CHUNKS_PER_BANK; c++) {
             uint8_t chunk_payload[36] = {0};
             uint32_t offset = (b * BANK_SIZE) + (c * CHUNK_SIZE);
 
-            // Prepare Header: Bank (2 bytes) + Chunk (2 bytes) in Big Endian
             uint16_t be_b = htons(b);
             uint16_t be_c = htons(c);
             memcpy(chunk_payload, &be_b, 2);
             memcpy(chunk_payload + 2, &be_c, 2);
 
-            // Copy Data (handle end of file padding)
             if (offset < file_size) {
                 size_t to_copy = (file_size - offset < CHUNK_SIZE) ? (file_size - offset) : CHUNK_SIZE;
                 memcpy(chunk_payload + 4, file_data + offset, to_copy);
             }
 
             if (execute_command(device, 0x03, chunk_payload, 36, &resp, 1) < 0 || resp != 0) {
-                fprintf(stderr, "\nError at Bank %u, Chunk %u\n", b, c);
+                printf("\n\x1b[1;31m[!] WRITE ERROR at Bank %u, Chunk %u\x1b[0m\n", b, c);
                 free(file_data);
                 return -1;
             }
         }
     }
 
-    printf("\x1b[1;32m\n == Upload Finished Successfully! ==\x1b[0m\n");
+    printf("\n\n\x1b[1;32m   =================================================\x1b[0m\n");
+    printf("\x1b[1;32m       SUCCESS: ROM flashed to cartridge memory!\x1b[0m\n");
+    printf("\x1b[1;32m   =================================================\x1b[0m\n");
+
     free(file_data);
     return 0;
 }
 
 int delete_rom(CrocoDevice *device, uint8_t rom_id) {
-    printf("Attempting to delete ROM ID: %u...\n", rom_id);
+    printf("      Attempting to delete ROM ID: %u...\n", rom_id);
 
     uint8_t payload = rom_id;
     uint8_t response[2];
@@ -470,7 +473,7 @@ int delete_rom(CrocoDevice *device, uint8_t rom_id) {
         return -1;
     }
 
-    printf("\x1b[1;32mSuccessfully deleted ROM %u and its save file.\x1b[0m\n", rom_id);
+    printf("      \x1b[1;32mSuccessfully deleted ROM %u and its save file.\x1b[0m\n", rom_id);
     return 0;
 }
 
@@ -543,16 +546,29 @@ int main(int argc, char *argv[]) {
                 list_games(&device);
                 break;
             case 'a':
-                printf("Enter path to ROM file: ");
+                printf("\n\x1b[1;34m   [?]\x1b[0m \x1b[1mEnter path to ROM file: \x1b[0m");
+                fflush(stdout); 
                 scanf("%s", path);
-                printf("Enter display name (max 17 chars): ");
+
+                printf("\x1b[1;34m   [?]\x1b[0m \x1b[1mEnter display name (max 17 chars): \x1b[0m");
+                fflush(stdout);
                 scanf("%s", name);
+
                 upload_rom(&device, path, name);
                 break;
             case 'd':
-                printf("Enter ROM ID to delete: ");
+                printf("\n");
+                printf("   \x1b[1;31m[!] DANGER ZONE\x1b[0m\n");
+                printf("    \x1b[1;31m[-] \x1b[0m\x1b[1mEnter ROM ID to wipe: \x1b[0m");
+                fflush(stdout);
+                
                 if (scanf("%d", &rom_id) == 1) {
+                    printf("\x1b[1;33m       Processing request for ID %d...\x1b[0m\n", rom_id);
                     delete_rom(&device, (uint8_t)rom_id);
+                } else {
+                    printf("\x1b[1;31m      Invalid ID format.\x1b[0m\n");
+                    // clear buff in case of bad input
+                    while(getchar() != '\n'); 
                 }
                 break;
             case 'i':

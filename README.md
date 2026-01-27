@@ -105,8 +105,20 @@ When selecting the upload option, you will be prompted for:
 Example:
 
 ```txt
-Enter path to ROM file: roms/snake.gb
-Enter display name (max 17 chars): Snake
+[?] Enter path to ROM file: roms/Snake.gb
+[?] Enter display name (max 17 chars): Snake
+
+[>] Initializing Data Stream...
+    Target:  Snake
+    Size:    32768 bytes (2 banks)
+
+[+] Handshake successful. Uploading data...
+
+    Writing Bank: [2/2] ...
+
+=================================================
+    SUCCESS: ROM flashed to cartridge memory!
+=============================================================
 ```
 
 The cartridge will calculate the required number of banks (16KB banks) and transfer the ROM in 32-byte chunks. A progress indicator shows the current bank being written.
@@ -116,7 +128,8 @@ The cartridge will calculate the required number of banks (16KB banks) and trans
 Select the delete option and enter the ROM ID (shown in the game list):
 
 ```txt
-Enter ROM ID to delete: 0
+[!] DANGER ZONE
+    [-] Enter ROM ID to wipe: 9
 ```
 
 This will remove both the ROM and its associated save file.
