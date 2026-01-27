@@ -220,7 +220,7 @@ int execute_command(CrocoDevice *device, uint8_t command, uint8_t *payload,
         return -1;
     }
 
-    usleep(10000);  // 10ms delay
+    usleep(5000);  // 5ms delay
 
     uint8_t buffer[128];
     int bytes_read = read_response(device, buffer, sizeof(buffer));
@@ -251,7 +251,7 @@ int execute_command(CrocoDevice *device, uint8_t command, uint8_t *payload,
     return data_len;
 }
 
-int list_games(CrocoDevice *device) {
+int list_games(CrocoDevice *device, int mode) {
     printf("\n   \x1b[1;34m[>] Fetching Cartridge Memory...\x1b[0m\n");
 
     uint8_t response[10];
@@ -266,15 +266,17 @@ int list_games(CrocoDevice *device) {
     uint16_t used_banks = ((response[2] << 8) | response[1]) / 256;
     uint16_t max_banks = 888;
     float percent = ((float)used_banks / max_banks) * 100;
+    
+    if (mode != 1) {
+        printf("   \x1b[1;33m+-------------------------------------------------------------+\x1b[0m\n");
+        printf("     Storage: [\x1b[1;32m%u/%u Banks\x1b[0m] used (%.1f%% full)\n", used_banks, max_banks, percent);
+        printf("     Capacity: %u Games Registered\n", num_roms);
+        printf("   \x1b[1;33m+-------------------------------------------------------------+\x1b[0m\n\n");
 
-    printf("   \x1b[1;33m+-------------------------------------------------------------+\x1b[0m\n");
-    printf("     Storage: [\x1b[1;32m%u/%u Banks\x1b[0m] used (%.1f%% full)\n", used_banks, max_banks, percent);
-    printf("     Capacity: %u Games Registered\n", num_roms);
-    printf("   \x1b[1;33m+-------------------------------------------------------------+\x1b[0m\n\n");
-
-    if (num_roms == 0) {
-        printf("     \x1b[90m(No ROMs found on cartridge memory)\x1b[0m\n");
-        return 0;
+        if (num_roms == 0) {
+            printf("     \x1b[90m(No ROMs found on cartridge memory)\x1b[0m\n");
+            return 0;
+        }
     }
 
     printf(" \x1b[1;37m  ID   NAME                     | ROM SIZE   | RAM     | MBC \x1b[0m\n");
@@ -311,7 +313,7 @@ int list_games(CrocoDevice *device) {
             num_ram_banks, 
             mbc);
 
-        usleep(10000); 
+        usleep(5000); 
     }
     printf(" \x1b[90m  -------------------------------------------------------------\x1b[0m\n");
 
@@ -350,7 +352,7 @@ int get_device_info(CrocoDevice *device) {
     printf("    \x1b[1m%-15s\x1b[0m %s\n", "Git Dirty:", dirty_label);
 
     // Get serial ID (command 0xFD)
-    usleep(50000); 
+    usleep(5000); 
     uint8_t serial_response[10];
     int serial_bytes = execute_command(device, 0xFD, NULL, 0, serial_response, sizeof(serial_response));
 
@@ -543,7 +545,7 @@ int main(int argc, char *argv[]) {
 
         switch (choice) {
             case 'l':
-                list_games(&device);
+                list_games(&device, 0);
                 break;
             case 'a':
                 printf("\n\x1b[1;34m   [?]\x1b[0m \x1b[1mEnter path to ROM file: \x1b[0m");
@@ -557,19 +559,33 @@ int main(int argc, char *argv[]) {
                 upload_rom(&device, path, name);
                 break;
             case 'd':
-                list_games(&device);
-                printf("\n");
-                printf("   \x1b[1;31m[!] DANGER ZONE\x1b[0m\n");
-                printf("    \x1b[1;31m[-] \x1b[0m\x1b[1mEnter ROM ID to wipe: \x1b[0m");
-                fflush(stdout);
-                
-                if (scanf("%d", &rom_id) == 1) {
-                    printf("\x1b[1;33m       Processing request for ID %d...\x1b[0m\n", rom_id);
-                    delete_rom(&device, (uint8_t)rom_id);
-                } else {
-                    printf("\x1b[1;31m      Invalid ID format.\x1b[0m\n");
-                    // clear buff in case of bad input
-                    while(getchar() != '\n'); 
+                {
+                    char input[16];
+                    list_games(&device, 1); // mode 1 = no header
+                    printf("\n");
+                    printf("   \x1b[1;31m[!] DANGER ZONE\x1b[0m\n");
+                    printf("    \x1b[1;31m[-] \x1b[0m\x1b[1mEnter ROM ID to wipe (or type 'EXIT'): \x1b[0m");
+                    fflush(stdout);
+                    
+                    if (scanf("%s", input) == 1) {
+                        if (strcasecmp(input, "EXIT") == 0) {
+                            printf("    \x1b[1;34mReturning to main menu...\x1b[0m\n");
+                            break; 
+                        }
+
+                        char *endptr;
+                        long val = strtol(input, &endptr, 10);
+
+                        if (*endptr == '\0') {
+                            printf("\x1b[1;33m        Processing request for ID %ld...\x1b[0m\n", val);
+                            delete_rom(&device, (uint8_t)val);
+                        } else {
+                            printf("\x1b[1;31m      Invalid input. Please enter a number or 'EXIT'.\x1b[0m\n");
+                        }
+                    } else {
+                        printf("\x1b[1;31m      Invalid ID format.\x1b[0m\n");
+                        while(getchar() != '\n'); 
+                    }
                 }
                 break;
             case 'i':
