@@ -546,6 +546,72 @@ int download_save(CrocoDevice *device, uint8_t rom_id, const char *dest_path, ui
     return 0;
 }
 
+int upload_save(CrocoDevice *device, uint8_t rom_id, const char *file_path, uint8_t num_ram_banks) {
+    FILE *f = fopen(file_path, "rb");
+    if (!f) {
+        printf("\x1b[1;31m[!] ERROR: Could not open save file: %s\x1b[0m\n", file_path);
+        return -1;
+    }
+
+    const int SRAM_BANK_SIZE = 8192;
+    const int CHUNK_SIZE = 32;
+    const int CHUNKS_PER_BANK = SRAM_BANK_SIZE / CHUNK_SIZE;
+
+    // check file if fit in RAM
+    fseek(f, 0, SEEK_END);
+    long actual_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    uint32_t expected_size = num_ram_banks * SRAM_BANK_SIZE;
+    if (actual_size < expected_size) {
+        printf("\x1b[1;33m[!] WARNING: File is smaller than expected (%ld < %u bytes). Padding with zeros.\x1b[0m\n", actual_size, expected_size);
+    }
+
+    printf("\n\x1b[1;34m   [>] Initializing Save Upload...\x1b[0m\n");
+    printf("       Target ROM ID: \x1b[1;36m%u\x1b[0m\n", rom_id);
+    printf("       Total Upload:  \x1b[1;33m%u bytes\x1b[0m\n", expected_size);
+
+    // Command 0x08: Request Save Upload
+    uint8_t resp;
+    if (execute_command(device, 0x08, &rom_id, 1, &resp, 1) < 0 || resp != 0) {
+        printf("\x1b[1;31m[!] Upload request rejected by cartridge (Code: %d)\x1b[0m\n", resp);
+        fclose(f);
+        return -1;
+    }
+    printf("\x1b[1;32m   [+] Handshake successful. Sending SRAM data...\x1b[0m\n\n");
+
+    // Command 0x09: Send Chunks
+    for (uint16_t b = 0; b < num_ram_banks; b++) {
+        printf("\r       \x1b[1;33mWriting Bank:\x1b[0m [\x1b[1;32m%u\x1b[0m/\x1b[1;32m%u\x1b[0m] ... ", b + 1, num_ram_banks);
+        fflush(stdout);
+
+        for (uint16_t c = 0; c < CHUNKS_PER_BANK; c++) {
+            uint8_t chunk_payload[36] = {0};
+
+            // Format: [Bank High, Bank Low, Chunk High, Chunk Low, ...Data...]
+            uint16_t be_b = htons(b);
+            uint16_t be_c = htons(c);
+            memcpy(chunk_payload, &be_b, 2);
+            memcpy(chunk_payload + 2, &be_c, 2);
+
+            size_t read_bytes = fread(chunk_payload + 4, 1, CHUNK_SIZE, f);
+
+            if (execute_command(device, 0x09, chunk_payload, 36, &resp, 1) < 0 || resp != 0) {
+                printf("\n\x1b[1;31m[!] WRITE ERROR at Bank %u, Chunk %u\x1b[0m\n", b, c);
+                fclose(f);
+                return -1;
+            }
+        }
+    }
+
+    printf("\n\n\x1b[1;32m   =================================================\x1b[0m\n");
+    printf("\x1b[1;32m       SUCCESS: Savegame uploaded to cartridge!\x1b[0m\n");
+    printf("\x1b[1;32m   =================================================\x1b[0m\n");
+
+    fclose(f);
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
     CrocoDevice device = {0};
     int result = 0;
@@ -589,6 +655,7 @@ int main(int argc, char *argv[]) {
         printf("  \x1b[34m[l]\x1b[0m List Library\n");
         printf("  \x1b[32m[a]\x1b[0m Flash New ROM\n");
         printf("  \x1b[32m[s]\x1b[0m Backup Savegame\n");
+        printf("  \x1b[32m[u]\x1b[0m Upload Savegame\n");
         printf("  \x1b[31m[d]\x1b[0m Wipe ROM\n");
         printf("  \x1b[34m[i]\x1b[0m Hardware Info\n");
         printf("  \x1b[90m[q]\x1b[0m Disconnect\n");
@@ -659,6 +726,40 @@ int main(int argc, char *argv[]) {
                     if (scanf("%s", save_path) != 1) break;
 
                     download_save(&device, target_id, save_path, ram_banks);
+                }
+                break;
+            case 'u': {
+                    char input[16];
+                    char save_path[256];
+                    list_games(&device, 1); 
+
+                    printf("\n\x1b[1;34m   [?] Enter ROM ID to upload save to (or 'EXIT'): \x1b[0m");
+                    fflush(stdout);
+                    if (scanf("%s", input) != 1) break;
+                    if (strcasecmp(input, "EXIT") == 0) break;
+
+                    uint8_t target_id = (uint8_t)atoi(input);
+
+                    // Get Info to check RAM capacity
+                    uint8_t info_resp[25];
+                    int info_bytes = execute_command(&device, 0x04, &target_id, 1, info_resp, sizeof(info_resp));
+
+                    if (info_bytes < 18) {
+                        printf("\x1b[1;31m   [!] Error: Could not retrieve info for ID %u\x1b[0m\n", target_id);
+                        break;
+                    }
+
+                    uint8_t ram_banks = info_resp[17];
+                    if (ram_banks == 0) {
+                        printf("\x1b[1;33m   [!] This game has no RAM. It doesn't need a save file.\x1b[0m\n");
+                        break;
+                    }
+
+                    printf("\x1b[1;34m   [?] Enter path to .sav file to upload: \x1b[0m");
+                    fflush(stdout);
+                    if (scanf("%s", save_path) != 1) break;
+
+                    upload_save(&device, target_id, save_path, ram_banks);
                 }
                 break;
             case 'd': {
