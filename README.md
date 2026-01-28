@@ -9,7 +9,6 @@ A command-line interface for interacting with the Croco Game Boy cartridge reade
 - [x] Delete Games - Remove ROMs and their associated save files
 - [x] Device Info - Display cartridge firmware version and hardware details
 - [ ] Save File Management - Download and upload Game Boy save files (SRAM)
-- [ ] RTC Support - Fetch and set Real Time Clock data for cartridges with RTC chips
 
 ## Images
 
