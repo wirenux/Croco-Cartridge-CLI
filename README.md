@@ -90,6 +90,8 @@ The menu provides the following options:
 
 - **`l`** - List all games on cartridge
 - **`a`** - Add/upload a new ROM
+- **`s`** - Backup Savefile
+- **`u`** - Upload a Savefile
 - **`d`** - Delete a ROM by ID
 - **`i`** - Display device information
 - **`q`** - Quit
