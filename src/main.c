@@ -479,14 +479,71 @@ int delete_rom(CrocoDevice *device, uint8_t rom_id) {
     return 0;
 }
 
-void print_usage(const char *prog) {
-    printf("Usage: %s [options]\n", prog);
-    printf("Options:\n");
-    printf("  -l, --list            List all games on cartridge\n");
-    printf("  -i, --info            Get device information\n");
-    printf("  -w <file> <name>      Write/Upload a ROM to the cartridge\n");
-    printf("  -h, --help            Show this help message\n");
-    printf("  -d <id>               Delete a ROM by its ID\n");
+int download_save(CrocoDevice *device, uint8_t rom_id, const char *dest_path, uint8_t num_ram_banks) {
+    FILE *f = fopen(dest_path, "wb");
+    if (!f) {
+        printf("\x1b[1;31m[!] ERROR: Could not create save file: %s\x1b[0m\n", dest_path);
+        return -1;
+    }
+
+    const int SRAM_BANK_SIZE = 8192;
+    const int CHUNK_SIZE = 32;
+    const int CHUNKS_PER_BANK = SRAM_BANK_SIZE / CHUNK_SIZE;
+    uint32_t total_size = num_ram_banks * SRAM_BANK_SIZE;
+
+    printf("\n\x1b[1;34m   [>] Requesting Savegame Data...\x1b[0m\n");
+    printf("       ROM ID:  \x1b[1;36m%u\x1b[0m\n", rom_id);
+    printf("       Size:    \x1b[1;33m%u bytes\x1b[0m (%u RAM banks)\n", total_size, num_ram_banks);
+
+    // Command 0x06: Request Save Download
+    uint8_t resp;
+    if (execute_command(device, 0x06, &rom_id, 1, &resp, 1) < 0 || resp != 0) {
+        printf("\x1b[1;31m[!] Download request rejected (Code: %d)\x1b[0m\n", resp);
+        fclose(f);
+        return -1;
+    }
+    printf("\x1b[1;32m   [+] Handshake successful. Receiving chunks...\x1b[0m\n\n");
+
+    // Command 0x07: Receive Chunks
+    for (uint16_t b = 0; b < num_ram_banks; b++) {
+        printf("\r       \x1b[1;33mReading Bank:\x1b[0m [\x1b[1;32m%u\x1b[0m/\x1b[1;32m%u\x1b[0m] ... ", b + 1, num_ram_banks);
+        fflush(stdout);
+
+        for (uint16_t c = 0; c < CHUNKS_PER_BANK; c++) {
+            uint8_t chunk_resp[36]; // 2 (bank) + 2 (chunk) + 32 (data)
+
+            if (execute_command(device, 0x07, NULL, 0, chunk_resp, 36) < 36) {
+                printf("\n\x1b[1;31m[!] READ ERROR at Bank %u, Chunk %u\x1b[0m\n", b, c);
+                fclose(f);
+                return -1;
+            }
+
+            uint16_t received_b = (uint16_t)((chunk_resp[0] << 8) | chunk_resp[1]);
+            uint16_t received_c = (uint16_t)((chunk_resp[2] << 8) | chunk_resp[3]);
+
+            if (received_b != b || received_c != c) {
+                printf("\n\x1b[1;31m[!] SYNCHRONIZATION ERROR!\x1b[0m\n");
+                printf("    Expected: Bank %u, Chunk %u\n", b, c);
+                printf("    Received: Bank %u, Chunk %u\n", received_b, received_c);
+                printf("    \x1b[1;33mAdvice: Check USB connection or try a lower speed.\x1b[0m\n");
+                fclose(f);
+                return -1;
+            }
+
+            if (fwrite(chunk_resp + 4, 1, 32, f) != 32) {
+                printf("\n\x1b[1;31m[!] DISK ERROR: Failed to write to save file.\x1b[0m\n");
+                fclose(f);
+                return -1;
+            }
+        }
+    }
+
+    printf("\n\n\x1b[1;32m   =================================================\x1b[0m\n");
+    printf("\x1b[1;32m       SUCCESS: Savegame dumped to %s\x1b[0m\n", dest_path);
+    printf("\x1b[1;32m   =================================================\x1b[0m\n");
+
+    fclose(f);
+    return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -529,8 +586,9 @@ int main(int argc, char *argv[]) {
     // loop to keep the cartridge alive
     while (1) {
         printf("\n  \x1b[1mMAIN INTERFACE\x1b[0m\n");
-        printf("  \x1b[32m[l]\x1b[0m List Library\n");
+        printf("  \x1b[34m[l]\x1b[0m List Library\n");
         printf("  \x1b[32m[a]\x1b[0m Flash New ROM\n");
+        printf("  \x1b[32m[s]\x1b[0m Backup Savegame\n");
         printf("  \x1b[31m[d]\x1b[0m Wipe ROM\n");
         printf("  \x1b[34m[i]\x1b[0m Hardware Info\n");
         printf("  \x1b[90m[q]\x1b[0m Disconnect\n");
@@ -569,6 +627,40 @@ int main(int argc, char *argv[]) {
                     upload_rom(&device, path, name);
                 }
                 break;
+            case 's': {
+                    char input[16];
+                    char save_path[256];
+                    list_games(&device, 1); // mode 1 = no header
+
+                    printf("\n\x1b[1;34m   [?] Enter ROM ID to download save (or 'EXIT'): \x1b[0m");
+                    fflush(stdout);
+                    if (scanf("%s", input) != 1) break;
+                    if (strcasecmp(input, "EXIT") == 0) break;
+
+                    uint8_t target_id = (uint8_t)atoi(input);
+
+                    // Fetch ROM info first to know how many RAM banks to download
+                    uint8_t info_resp[25];
+                    int info_bytes = execute_command(&device, 0x04, &target_id, 1, info_resp, sizeof(info_resp));
+
+                    if (info_bytes < 18) {
+                        printf("\x1b[1;31m   [!] Error: Could not retrieve info for ID %u\x1b[0m\n", target_id);
+                        break;
+                    }
+
+                    uint8_t ram_banks = info_resp[17];
+                    if (ram_banks == 0) {
+                        printf("\x1b[1;33m   [!] This game has no RAM banks (No save to download).\x1b[0m\n");
+                        break;
+                    }
+
+                    printf("\x1b[1;34m   [?] Enter destination path (e.g., backup.sav): \x1b[0m");
+                    fflush(stdout);
+                    if (scanf("%s", save_path) != 1) break;
+
+                    download_save(&device, target_id, save_path, ram_banks);
+                }
+                break;
             case 'd': {
                     char input[16];
                     list_games(&device, 1); // mode 1 = no header
@@ -576,7 +668,7 @@ int main(int argc, char *argv[]) {
                     printf("   \x1b[1;31m[!] DANGER ZONE\x1b[0m\n");
                     printf("    \x1b[1;31m[-] \x1b[0m\x1b[1mEnter ROM ID to wipe (or type 'EXIT'): \x1b[0m");
                     fflush(stdout);
-                    
+
                     if (scanf("%s", input) == 1) {
                         if (strcasecmp(input, "EXIT") == 0) { // case sensitive
                             printf("    \x1b[1;34mReturning to main menu...\x1b[0m\n");
