@@ -1,8 +1,18 @@
 # Croco Cartridge CLI
 
+[![GitHub stars](https://img.shields.io/github/stars/wirenux/Croco-Cartridge-CLI?style=flat&color=gold)](https://github.com/wirenux/Croco-Cartridge-CLI/stargazers)
+[![License](https://img.shields.io/badge/license-Unlicense-blue.svg?style=flat)](./UNLICENSE)
+[![OS - Linux](https://img.shields.io/badge/OS-Linux-orange?style=flat&logo=linux)](https://www.linux.org/)
+[![OS - macOS](https://img.shields.io/badge/OS-macOS-silver?style=flat&logo=apple)](https://www.apple.com/macos/)
+[![Language - C](https://img.shields.io/badge/Language-C-A8B9CC?style=flat&logo=c)](https://en.wikipedia.org/wiki/C_(programming_language))
+[![Hardware - RP2040](https://img.shields.io/badge/Hardware-RP2040-2e8aef?style=flat&logo=raspberrypi)](https://www.raspberrypi.com/documentation/microcontrollers/rp2040.html)
+[![Lastest Commit](https://img.shields.io/github/last-commit/wirenux/Croco-Cartridge-CLI?style=flat&logo=git)](https://www.raspberrypi.com/documentation/microcontrollers/rp2040.html)
+
 A command-line interface for interacting with the Croco Game Boy cartridge reader/writer. This tool allows you to manage ROMs, save files, and device information on your Croco cartridge via USB.
 
 ## Features
+
+![Status](https://img.shields.io/badge/Status-Fully%20complete%20yay%20◝(ᵔᗜᵔ)◜-green?style=flat)
 
 - [x] List Games - View all ROMs currently stored on the cartridge
 - [x] Upload ROMs - Write Game Boy ROM files to the cartridge
