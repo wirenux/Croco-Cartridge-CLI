@@ -12,8 +12,8 @@ A command-line interface for interacting with the Croco Game Boy cartridge reade
 
 ## Images
 
-<img src="assets/gif.gif" width=700>
-<img src="assets/main.png" width=500>
+<img src="assets/full.gif" width=700>
+<img src="assets/main.gif" width=500>
 <img src="assets/list.png" width=500>
 
 ## Requirements
