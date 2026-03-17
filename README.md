@@ -1,7 +1,7 @@
 # Croco Cartridge CLI
 
 [![GitHub stars](https://img.shields.io/github/stars/wirenux/Croco-Cartridge-CLI?style=flat&color=gold)](https://github.com/wirenux/Croco-Cartridge-CLI/stargazers)
-[![License](https://img.shields.io/badge/license-Unlicense-blue.svg?style=flat)](./UNLICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](./LICENSE)
 [![OS - Linux](https://img.shields.io/badge/OS-Linux-orange?style=flat&logo=linux)](https://www.linux.org/)
 [![OS - macOS](https://img.shields.io/badge/OS-macOS-silver?style=flat&logo=apple)](https://www.apple.com/macos/)
 [![Language - C](https://img.shields.io/badge/Language-C-A8B9CC?style=flat&logo=c)](https://en.wikipedia.org/wiki/C_(programming_language))
@@ -254,14 +254,14 @@ Based on the real webapp [https://cartridge-web.croco-electronics.de/](https://c
 
 ### Boring stuff
 
-This project is released under the [Unlicense](./UNLICENSE).
+This project is released under the [MIT](./LICENSE) license.
 
 Read more on [my blog](https://wirenux.github.io)
 
 Credit:
 
 - [Shilga](https://github.com/shilga)
-- [rp2040-gameboy-cartridge-firmware](https://github.com/shilga/rp2040-gameboy-cartridge-firmware/tree/master)
+- [rp2040-gameboy-cartridge-firmware](https://github.com/shilga/rp2040-gameboy-cartridge-firmware/)
 - [croco-cartridge-webapp](https://github.com/shilga/croco-cartridge-webapp)
 
 **Developed with ❤️ & 💪 by [@wirenux](https://github.com/wirenux)**
